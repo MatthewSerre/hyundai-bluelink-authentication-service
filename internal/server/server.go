@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 
 	authv1 "github.com/MatthewSerre/hyundai-bluelink-protobufs/gen/go/protos/authentication/v1"
 	"github.com/golang-jwt/jwt"
@@ -25,45 +24,42 @@ type Server struct {
 type Auth struct {
 	Username   string
 	PIN        string
-	JWT_Token  string
-	JWT_Expiry int64
+	JWTToken  string
+	JWTExpiry int64
 }
 
 func main() {
 	lis, err := net.Listen("tcp", addr)
 
 	if err != nil {
-		log.Fatalf("Failed to listen on: %v\n", err)
+		log.Fatalf("failed to listen with error: %v\n", err)
 	}
 
-	log.Printf("Listening on %s\n", addr)
+	log.Printf("authentication server listening on %s\n", addr)
 
 	s := grpc.NewServer()
 	authv1.RegisterAuthenticationServiceServer(s, &Server{})
 
 	if err = s.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v\n", err)
+		log.Fatalf("failed to server with error: %v\n", err)
 	}
 }
 
 func (s *Server) Authenticate(context context.Context, request *authv1.AuthenticationRequest) (*authv1.AuthenticationResponse, error) {
-	log.Println("Authenticating...")
+	log.Println("authentication request received from client")
 
 	auth, err := authenticate(request.Username, request.Password, request.Pin)
 
 	if err != nil {
-		log.Println("error loggin in:", err)
+		log.Printf("failed to authenticate with error: %v", err)
 		return &authv1.AuthenticationResponse{}, err
 	}
-
-	log.Println("Authentication successful!")
-	log.Printf("Your token will expire by %v; you will be prompted to reauthenticate afer that time.", time.Unix(auth.JWT_Expiry, 0))
 
 	return &authv1.AuthenticationResponse{
 		Username: auth.Username,
 		Pin: auth.PIN,
-		JwtToken: auth.JWT_Token,
-		JwtExpiry: auth.JWT_Expiry,
+		JwtToken: auth.JWTToken,
+		JwtExpiry: auth.JWTExpiry,
 	}, nil
 }
 
@@ -99,8 +95,6 @@ func getCSFRToken() (string, error) {
 	json.Unmarshal([]byte(body), &result)
 
 	csrf := result["jwt_token"].(string)
-
-	log.Println("CSFR token:", csrf)
 
 	// Generate a new request to validate the token
 
@@ -222,7 +216,7 @@ func authenticate(username, password, pin string) (Auth, error) {
 
 	expires_at := int64(token.Claims.(jwt.MapClaims)["exp"].(float64) / 1000)
 
-	auth := Auth{ Username: username, PIN: pin, JWT_Token: jwtID, JWT_Expiry: expires_at }
+	auth := Auth{ Username: username, PIN: pin, JWTToken: jwtID, JWTExpiry: expires_at }
 
 	return auth, nil
 }
