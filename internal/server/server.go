@@ -123,7 +123,7 @@ func getCSFRToken() (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		log.Println("error could not validate csrf ", resp.Status)
+		log.Println("error could not validate csrf:", resp.Status)
 		return "", err
 	}
 
@@ -145,7 +145,7 @@ func authenticate(username, password, pin string) (Auth, error) {
 	req, err := http.NewRequest("POST", "https://owners.hyundaiusa.com/bin/common/connectCar", nil)
 
 	if err != nil {
-		log.Println("Error getting csrf_token req:", err)
+		log.Println("error generating CSFR token request:", err)
 		return Auth{}, err
 	}
 
